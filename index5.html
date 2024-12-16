@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Math Quiz</title>
+    <style>
+        :root {
+            --primary-color: #00539C;
+            --secondary-color: #007BFF;
+            --dark-background: #333;
+            --light-background: #f4f4f4;
+            --button-hover-color: #003366;
+            --correct-color: green;
+            --incorrect-color: red;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', sans-serif;
+            background-color: var(--light-background);
+            margin: 0;
+            padding: 0;
+            color: #333;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        nav {
+            background: var(--primary-color);
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav a,
+        nav button {
+            color: white;
+            text-decoration: none;
+            padding: 5px 10px;
+        }
+
+        .dark-mode {
+            background-color: var(--dark-background);
+            color: white;
+        }
+
+        .dark-mode nav {
+            background: #444;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .question-container {
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        .question-container input[type="text"] {
+            margin-top: 10px;
+            padding: 10px;
+            width: 50%;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .question-container button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: #28a745;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .question-container button:hover {
+            background: #218838;
+        }
+
+        #download-pdf {
+            padding: 10px 20px;
+            background: #007BFF;
+            border: none;
+            color: white;
+            cursor: pointer;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .dark-mode nav {
+            background: #444;
+        }
+
+        .dark-mode .question-container {
+            background: rgba(50, 50, 50, 0.8);
+        }
+
+        button#submit {
+            background-color: #28a745;
+        }
+
+        button#submit:hover {
+            background-color: #218838;
+        }
+
+        #progress p {
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <div class="logo">
+                <h1>Math Quiz</h1>
+            </div>
+            <div class="nav-links">
+                <a href="#">Home</a>
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+            </div>
+            <form action="search.html" method="get">
+                <label for="query"></label>
+                <input type="text" id="query" name="query" placeholder="Search:" aria-label="Search field">
+                <button type="submit">Search</button>
+            </form>
+            <button id="toggle-dark-mode" aria-pressed="false" aria-label="Toggle dark mode">Toggle Dark Mode</button>
+        </nav>
+    </header>
+    <main class="container">
+        <section class="question-container">
+            <p id="question"></p>
+            <label for="answer"></label>
+            <input type="text" id="answer" placeholder="Your answer" aria-label="Answer input">
+            <button id="submit">Submit</button>
+            <button id="hint">Hint</button>
+            <button id="explanation">Explanation</button>
+            <p id="feedback" aria-live="polite"></p>
+        </section>
+        <section id="answer-list"></section>
+        <button id="download-pdf">Download Answers as PDF</button>
+        <div id="progress"></div>
+    </main>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            generateQuestion();
+            setupEventListeners();
+        });
+
+        const questionElement = document.getElementById('question');
+        const answerElement = document.getElementById('answer');
+        const feedbackElement = document.getElementById('feedback');
+        const answerListElement = document.getElementById('answer-list');
+        const downloadButton = document.getElementById('download-pdf');
+        const darkModeButton = document.getElementById('toggle-dark-mode');
+        const hintButton = document.getElementById('hint');
+        const explanationButton = document.getElementById('explanation');
+        let correctAnswer;
+        let userProgress = {
+            correct: 0,
+            incorrect: 0
+        };
+        let currentQuestion = {};
+        let questionTypes = ['addition', 'subtraction', 'multiplication'];
+
+        function setupEventListeners() {
+            document.getElementById('submit').addEventListener('click', checkAnswer);
+            answerElement.addEventListener('keypress', handleEnter);
+            downloadButton.addEventListener('click', downloadAnswersAsPDF);
+            darkModeButton.addEventListener('click', toggleDarkMode);
+            hintButton.addEventListener('click', () => showHintOrExplanation('hint'));
+            explanationButton.addEventListener('click', () => showHintOrExplanation('explanation'));
+        }
+
+        function generateQuestion() {
+            const type = questionTypes[Math.floor(Math.random() * questionTypes.length)];
+            let num1 = Math.floor(Math.random() * 10) + 1;
+            let num2 = Math.floor(Math.random() * 10) + 1;
+
+            let { question, hint, explanation } = createQuestion(type, num1, num2);
+
+            currentQuestion = { question, correctAnswer, hint, explanation };
+            questionElement.textContent = question;
+        }
+
+        function createQuestion(type, num1, num2) {
+            let question = '';
+            let hint = '';
+            let explanation = '';
+
+            switch (type) {
+                case 'addition':
+                    question = `${num1} + ${num2} =`;
+                    correctAnswer = num1 + num2;
+                    hint = 'Addition is the process of adding two numbers.';
+                    explanation = `When you add ${num1} and ${num2}, you get ${correctAnswer}.`;
+                    break;
+                case 'subtraction':
+                    question = `${num1} - ${num2} =`;
+                    correctAnswer = num1 - num2;
+                    hint = 'Subtraction is the process of taking one number away from another.';
+                    explanation = `When you subtract ${num1} and ${num2}, you get ${correctAnswer}.`;
+                    break;
+                case 'multiplication':
+                    question = `${num1} * ${num2} =`;
+                    correctAnswer = num1 * num2;
+                    hint = 'Multiplication is the process of combining equal groups.';
+                    explanation = `When you multiply ${num1} and ${num2}, you get ${correctAnswer}.`;
+                    break;
+            }
+
+            return { question, hint, explanation };
+        }
+
+        function showHintOrExplanation(type) {
+            alert(currentQuestion[type]);
+        }
+
+        function checkAnswer() {
+            const userAnswer = parseInt(answerElement.value, 10);
+            const feedback = document.getElementById('feedback');
+
+            if (userAnswer === correctAnswer) {
+                feedback.textContent = 'Correct!';
+                feedback.style.color = 'green';
+                userProgress.correct++;
+            } else {
+                feedback.textContent = `Incorrect. The correct answer is ${correctAnswer}`;
+                feedback.style.color = 'red';
+                userProgress.incorrect++;
+            }
+
+            saveAnswer(currentQuestion.question, userAnswer, correctAnswer);
+            showAnswers();
+            updateProgress();
+            setTimeout(generateQuestion, 1000);
+            document.getElementById('answer').value = '';
+        }
+
+        function saveAnswer(question, userAnswer, correctAnswer) {
+            const answers = JSON.parse(localStorage.getItem('quizAnswers')) || [];
+            answers.push({ question, userAnswer, correctAnswer });
+            localStorage.setItem('quizAnswers', JSON.stringify(answers));
+        }
+
+        function showAnswers() {
+            const answers = JSON.parse(localStorage.getItem('quizAnswers')) || [];
+
+            answerListElement.innerHTML = '<ul>' + answers.map(answer => `
+                <li>
+                    ${answer.question} Your answer: ${answer.userAnswer} Correct answer: ${answer.correctAnswer}
+                </li>
+            `).join('') + '</ul>';
+        }
+
+        function downloadAnswersAsPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const answers = JSON.parse(localStorage.getItem('quizAnswers')) || [];
+            let content = 'Math Quiz Answers\n\n';
+
+            answers.forEach(answer => {
+                content += `${answer.question} Your answer: ${answer.userAnswer} Correct answer: ${answer.correctAnswer}\n`;
+            });
+
+            content += `\nProgress:\n`;
+            content += `Correct Answers: ${userProgress.correct}\n`;
+            content += `Incorrect Answers: ${userProgress.incorrect}\n`;
+
+            doc.text(content, 10, 10);
+            doc.save('Math_Quiz_Answers.pdf');
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            darkModeButton.setAttribute('aria-pressed', document.body.classList.contains('dark-mode'));
+        }
+
+        function handleEnter(event) {
+            if (event.key === 'Enter') {
+                checkAnswer();
+            }
+        }
+
+        function updateProgress() {
+            const progressContainer = document.getElementById('progress');
+            if (!progressContainer) {
+                const newProgressContainer = document.createElement('div');
+                newProgressContainer.id = 'progress';
+                document.body.appendChild(newProgressContainer);
+            }
+
+            document.getElementById('progress').innerHTML = `
+                <p>Correct Answers: ${userProgress.correct}</p>
+                <p>Incorrect Answers: ${userProgress.incorrect}</p>
+            `;
+        }
+    </script>
+     <footer>
+        <p>&copy; Hesten IXL 2024. All rights reserved. Credit due where needed.</p>
+        <p>
+            <a href="privacy-policy.html">Privacy Policy</a> |
+            <a href="terms-of-service.html">Terms of Service</a> |
+            <a href="/contact-us.html">Contact Us</a>
+        </p>
+    </footer>
+</body>
+
+</html>
